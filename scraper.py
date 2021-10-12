@@ -1,11 +1,15 @@
 import requests
 from bs4 import BeautifulSoup
-from utils import UTILITIES, ARG_TYPES, TYPE_MAPS
+from utils import UTILITIES, TYPE_MAPS
 import json
 
 
 class WebScraper:
-    def __init__(self):
+    def __init__(self, utilities=None):
+        if utilities is None:
+            utilities = UTILITIES
+
+        self.utilities = utilities
         self.descs = {}
         self.data = {}
 
@@ -26,17 +30,15 @@ class WebScraper:
                 arg = get_equal_arg(flag_line)
             self.data[utility][flag] = arg
 
-    def extract_utilities(self, utilities=None):
-        if utilities is None:
-            utilities = UTILITIES
+    def extract_utilities(self):
 
-        for utility in utilities:
+        for utility in self.utilities:
             utility_url = f'https://man7.org/linux/man-pages/man1/{utility}.1.html'
             r = requests.get(utility_url)
             soup = BeautifulSoup(r.text)
             desc = soup.find_all('pre')[2].text
 
-            self.descs[utility] = desc.split('\n')[1].strip()
+            self.descs[utility] = self.generate_syntax(utility, desc.split('\n')[1].strip())
             pre_len = len(soup.find_all('pre'))
             options = "\n".join([soup.find_all('pre')[i].text for i in range(3, pre_len)])
             stripped_options = [line.strip() for line in options.split('\n')]
@@ -46,11 +48,9 @@ class WebScraper:
 
             self.clean_and_insert_flags(utility, d)
 
-    def generate_syntax(self, utility):
-        syntax = self.descs[utility]
-
+    def generate_syntax(self, utility, syntax):
         if 'option' not in syntax.lower():
-            return f"Invalid syntax for utility {utility}, {syntax}"
+            return None
 
         s = syntax.replace('...', '')
         s = remove_punctuation(s)
@@ -84,6 +84,20 @@ class WebScraper:
 
         with open(map_path, 'w') as fp:
             json.dump(self.data, fp)
+
+    def insert_syntax(self, utility, syntax):
+        self.descs[utility] = syntax
+
+    def insert_flag(self, utility, flag, arg):
+        self.data[utility][flag] = arg
+
+    def unprocessed_utilities(self):
+        ret = []
+        for utility in self.utilities:
+            if utility not in self.descs:
+                ret.append(utility)
+
+        return ret
 
 
 def get_inner_brackets(s):

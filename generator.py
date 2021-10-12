@@ -24,9 +24,6 @@ class Generator:
         """Gets a list of all of the utilities supported by the generator, ordered by usage"""
         return self.utilities
 
-    def generate_commands(self, utility):
-        pass
-
     def generate_options(self, utility):
         flag_map = self.mappings[utility]
 
@@ -50,7 +47,7 @@ class Generator:
     def generate_commands(self, utility, max_commands=None):
         ops = self.generate_options(utility)
         ret = []
-        syntax = self.generate_syntax(utility)
+        syntax = self.syntax[utility]
         if "Invalid" in syntax:
             return ret
         for option_combo in ops:
@@ -59,6 +56,12 @@ class Generator:
         if not max_commands:
             return ret
         return
+
+    def generate_all_comands(self):
+        ret = []
+        for ut in self.utilities:
+            ret.extend(self.generate_commands(ut))
+        return ret
 
 
 def replace(rep_path, in_path, out_path='replaced_cmds.txt'):
