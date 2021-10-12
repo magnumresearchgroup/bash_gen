@@ -14,11 +14,10 @@ class WebScraper:
         self.data = {}
 
     def clean_and_insert_flags(self, utility, lines):
-        """CLeans and inserts the flags for a given utility into the data structure
+        """Cleans and inserts the flags for a given utility into the data structure
 
-        :param utility:
-        :param lines:
-        :return:
+        :param utility: The utility to insert flags for
+        :param lines: The lines of html scraped from the man pages
         """
         self.data[utility] = {}
         for flag_line in lines:
@@ -31,6 +30,7 @@ class WebScraper:
             self.data[utility][flag] = arg
 
     def extract_utilities(self):
+        """Extracts all of the utility information from the man pages"""
 
         for utility in self.utilities:
             utility_url = f'https://man7.org/linux/man-pages/man1/{utility}.1.html'
@@ -48,14 +48,21 @@ class WebScraper:
 
             self.clean_and_insert_flags(utility, d)
 
-    def generate_syntax(self, utility, syntax):
+    @staticmethod
+    def generate_syntax(utility, syntax):
+        """Generates valid syntax epression for given web scraped syntax
+
+        :param utility:
+        :param syntax:
+        :return
+        """
+
         if 'option' not in syntax.lower():
             return None
 
+        # clean scraped html syntax string
         s = syntax.replace('...', '')
-        s = remove_punctuation(s)
-        s = remove_brackets(s)
-        s = s.lower()
+        s = remove_brackets(remove_punctuation(s)).lower()
 
         sp = s.split(" ")
         cleaned = []

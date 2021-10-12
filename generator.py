@@ -57,7 +57,7 @@ class Generator:
             return ret
         return
 
-    def generate_all_comands(self):
+    def generate_all_commands(self):
         ret = []
         for ut in self.utilities:
             ret.extend(self.generate_commands(ut))
