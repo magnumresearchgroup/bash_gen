@@ -1,5 +1,6 @@
-from utils import UTILITIES, ARG_TYPES, TYPE_MAPS
+from utils import UTILITIES, ARG_TYPES
 import json
+import random
 
 
 def valid_arg(flag):
@@ -15,16 +16,16 @@ class Generator:
         :param map_path: (str) A file path to retrieve utility, flag, arg mappings.
         :param utilities: (list) of (str) a list of utilities to generate.
         """
-        if utilities is None:
-            utilities = UTILITIES
-
-        self.utilities = utilities
-
         with open(syntax_path) as fp:
             self.syntax = json.load(fp)
 
         with open(map_path) as fp:
             self.mappings = json.load(fp)
+
+        if utilities is None:
+            utilities = UTILITIES
+
+        self.utilities = list(filter(lambda x: x in self.syntax and x in self.mappings, utilities))
 
     def get_utilities(self):
         """Gets a list of all of the utilities supported by the generator, ordered by usage"""
@@ -46,12 +47,12 @@ class Generator:
         for option_combo in ops:
             ret.append(syntax.replace("option", option_combo))
 
-        if not max_commands:
+        if not max_commands or max_commands > len(ret):
             return ret
-        return []  # TODO
+        return random.sample(ret, max_commands)
 
     def generate_all_commands(self):
-        """Generates the maximum number of commands for every utility"""
+        """Generates the maximum number of commands for every utility."""
         ret = []
         for ut in self.utilities:
             if ut in self.syntax and ut in self.mappings:
@@ -59,6 +60,11 @@ class Generator:
         return ret
 
     def _generate_options(self, utility):
+        """Generates options combinations for a particular utility.
+
+        :param utility: (str) the utility to generate combinations for
+        :return: (list) of (str) of options combinations for the given utility.
+        """
         flag_map = self.mappings[utility]
 
         ret = []

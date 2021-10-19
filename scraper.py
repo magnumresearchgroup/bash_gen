@@ -27,22 +27,26 @@ class WebScraper:
         for utility in self.utilities:
             utility_url = f'https://man7.org/linux/man-pages/man1/{utility}.1.html'
             r = requests.get(utility_url)
-            soup = BeautifulSoup(r.text)
-            desc = soup.find_all('pre')[2].text
+            if r.status_code == 200:
+                print(utility)
+                soup = BeautifulSoup(r.text)
+                desc = soup.find_all('pre')[2].text
 
-            syntax = WebScraper._generate_syntax(utility, desc.split('\n')[1].strip())
-            if not syntax:
-                print(f"syntax not found for {utility}")
-            elif utility not in self.descs:
-                self.descs[utility] = syntax
-            pre_len = len(soup.find_all('pre'))
-            options = "\n".join([soup.find_all('pre')[i].text for i in range(3, pre_len)])
-            stripped_options = [line.strip() for line in options.split('\n')]
-            flag_lines = list(filter(lambda x: x and x[0] == "-", stripped_options))
+                syntax = WebScraper._generate_syntax(utility, desc.split('\n')[1].strip())
+                if not syntax:
+                    print(f"syntax not found for {utility}")
+                elif utility not in self.descs:
+                    self.descs[utility] = syntax
+                pre_len = len(soup.find_all('pre'))
+                options = "\n".join([soup.find_all('pre')[i].text for i in range(3, pre_len)])
+                stripped_options = [line.strip() for line in options.split('\n')]
+                flag_lines = list(filter(lambda x: x and x[0] == "-", stripped_options))
 
-            d = set(flag for flag in flag_lines)
+                d = set(flag for flag in flag_lines)
 
-            self._clean_and_insert_flags(utility, d)
+                self._clean_and_insert_flags(utility, d)
+            else:
+                print(f"No web page found for {utility}")
 
     def _clean_and_insert_flags(self, utility, lines):
         """Cleans and inserts the flags for a given utility into the data structure.
@@ -66,9 +70,9 @@ class WebScraper:
     def _generate_syntax(utility, syntax):
         """Generates valid syntax expression for given web scraped syntax.
 
-        :param utility: The utility to generate syntax for
-        :param syntax: The syntax scraped from the website
-        :return
+        :param utility: (str) the utility to generate syntax for.
+        :param syntax: (str) the syntax scraped from the website.
+        :return (str) the cleaned syntax expression.
         """
 
         if 'option' not in syntax.lower():
@@ -96,10 +100,10 @@ class WebScraper:
         return " ".join(cleaned)
 
     def save_json(self, syntax_path='syntax.json', map_path='utility_map.json'):
-        """Saves scraped data to provided file paths
+        """Saves scraped data to provided file paths.
 
-        :param syntax_path: (str) the filepath to save the json with syntax
-        :param map_path: (str) the file path to save the json with the utility, flag, arg mappings
+        :param syntax_path: (str) the filepath to save the json with syntax.
+        :param map_path: (str) the file path to save the json with the utility, flag, arg mappings.
         """
         if not self.data or not self.descs:
             raise Exception("Mapping and syntax uninitialized")
@@ -111,9 +115,25 @@ class WebScraper:
             json.dump(self.data, fp)
 
     def insert_syntax(self, utility, syntax):
+        """Manual insertion of syntax expression for given utility.
+
+        Useful for syntax that was not scraped correctly from man pages.
+
+        :param utility: (str) the utility to insert syntax for.
+        :param syntax: (str) the syntax expression to insert.
+        """
         self.descs[utility] = syntax
 
     def insert_flag(self, utility, flag, arg):
+        """Manual insertion of a flag, arg mapping for a given utility
+
+        Useful for flag, arg mappings that were not scraped correctly from man pages.
+
+        :param utility: (str) the utility to insert the mapping for.
+        :param flag: (str) the flag to insert.
+        :param arg: (str) or (None) the argument that maps to the provided flag. None if there
+            is no argument.
+        """
         self.data[utility][flag] = arg
 
     def unprocessed_utilities(self):
