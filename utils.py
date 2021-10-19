@@ -56,14 +56,14 @@ ARG_TYPES = [
 ]
 
 TYPE_MAPS = {
-    'Regex': {'str', 'sep', 'pattern', 'word', 'delim', 'suffix', 'from', 'glob'},
+    'Regex': {'str', 'sep', 'pattern', 'word', 'delim', 'suffix', 'from', 'glob', 'str'},
     'File': {'file'},
     'Directory': {'dir'},
     'Path': {'path'},
     'Number': {'num', 'n', 'cols', 'pid', 'max', 'bytes'},
-    'Quantity': {},
-    'Size':{'size'},
-    'Timespan':{},
+    'Quantity': {'quantity'},
+    'Size': {'size'},
+    'Timespan': {'timespan'},
     'DateTime': {'timestamp', 'time'},
-    'Permission':{},
+    'Permission': {'permission'},
 }

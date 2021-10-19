@@ -6,6 +6,10 @@ import json
 
 class WebScraper:
     def __init__(self, utilities=None):
+        """Initializes the WebScraper class to scrape for a given list of utilities.
+
+        :param utilities: (list) a list of utilities to scrape for. Defaults to list from utils.py.
+        """
         if utilities is None:
             utilities = UTILITIES
 
@@ -13,24 +17,12 @@ class WebScraper:
         self.descs = {}
         self.data = {}
 
-    def clean_and_insert_flags(self, utility, lines):
-        """Cleans and inserts the flags for a given utility into the data structure
-
-        :param utility: The utility to insert flags for
-        :param lines: The lines of html scraped from the man pages
-        """
-        self.data[utility] = {}
-        for flag_line in lines:
-            flag_line = remove_punctuation(flag_line)
-            flag, arg = get_flag(flag_line), None
-            if "[" in flag_line and "]" in flag_line:
-                arg = get_inner_brackets(flag_line)
-            elif "=" in flag_line:
-                arg = get_equal_arg(flag_line)
-            self.data[utility][flag] = arg
-
     def extract_utilities(self):
         """Extracts all of the utility information from the man pages"""
+        self.insert_syntax('find', 'find options Folder Regex')
+        self.insert_syntax('tar', 'tar options File File')
+        self.insert_syntax('file', 'file options File')
+        self.insert_syntax('hostname', 'hostname options')
 
         for utility in self.utilities:
             utility_url = f'https://man7.org/linux/man-pages/man1/{utility}.1.html'
@@ -38,7 +30,11 @@ class WebScraper:
             soup = BeautifulSoup(r.text)
             desc = soup.find_all('pre')[2].text
 
-            self.descs[utility] = self.generate_syntax(utility, desc.split('\n')[1].strip())
+            syntax = WebScraper._generate_syntax(utility, desc.split('\n')[1].strip())
+            if not syntax:
+                print(f"syntax not found for {utility}")
+            elif utility not in self.descs:
+                self.descs[utility] = syntax
             pre_len = len(soup.find_all('pre'))
             options = "\n".join([soup.find_all('pre')[i].text for i in range(3, pre_len)])
             stripped_options = [line.strip() for line in options.split('\n')]
@@ -46,14 +42,32 @@ class WebScraper:
 
             d = set(flag for flag in flag_lines)
 
-            self.clean_and_insert_flags(utility, d)
+            self._clean_and_insert_flags(utility, d)
+
+    def _clean_and_insert_flags(self, utility, lines):
+        """Cleans and inserts the flags for a given utility into the data structure.
+
+        :param utility: The utility to insert flags for.
+        :param lines: The lines of html scraped from the man pages.
+        """
+        self.data[utility] = {}
+        for flag_line in lines:
+            flag_line = WebScraper._remove_punctuation(flag_line)
+            flag, arg = WebScraper._get_flag(flag_line), None
+            if "[" in flag_line and "]" in flag_line:
+                arg = WebScraper._get_inner_brackets(flag_line)
+            elif "=" in flag_line:
+                arg = WebScraper._get_equal_arg(flag_line)
+            elif len(flag_line.split(" ")) == 2 and "-" not in flag_line[1]:
+                arg = flag_line[1]
+            self.data[utility][flag] = arg
 
     @staticmethod
-    def generate_syntax(utility, syntax):
-        """Generates valid syntax epression for given web scraped syntax
+    def _generate_syntax(utility, syntax):
+        """Generates valid syntax expression for given web scraped syntax.
 
-        :param utility:
-        :param syntax:
+        :param utility: The utility to generate syntax for
+        :param syntax: The syntax scraped from the website
         :return
         """
 
@@ -62,7 +76,7 @@ class WebScraper:
 
         # clean scraped html syntax string
         s = syntax.replace('...', '')
-        s = remove_brackets(remove_punctuation(s)).lower()
+        s = WebScraper._remove_brackets(WebScraper._remove_punctuation(s)).lower()
 
         sp = s.split(" ")
         cleaned = []
@@ -82,7 +96,11 @@ class WebScraper:
         return " ".join(cleaned)
 
     def save_json(self, syntax_path='syntax.json', map_path='utility_map.json'):
-        """Saves scraped data """
+        """Saves scraped data to provided file paths
+
+        :param syntax_path: (str) the filepath to save the json with syntax
+        :param map_path: (str) the file path to save the json with the utility, flag, arg mappings
+        """
         if not self.data or not self.descs:
             raise Exception("Mapping and syntax uninitialized")
 
@@ -106,51 +124,52 @@ class WebScraper:
 
         return ret
 
+    @staticmethod
+    def _get_inner_brackets(s):
+        open_idx = s.index("[") + 1
+        closed_idx = s.index("]")
+        a = s[open_idx: closed_idx]
+        a = a.replace("=", "")
+        return a
 
-def get_inner_brackets(s):
-    open_idx = s.index("[") + 1
-    closed_idx = s.index("]")
-    a = s[open_idx: closed_idx]
-    a = a.replace("=", "")
-    return a
+    @staticmethod
+    def _get_equal_arg(s):
+        return WebScraper._remove_punctuation(s.split("=")[1])
 
+    @staticmethod
+    def _remove_punctuation(s):
+        punctuation = set(_ for _ in ",.()")
+        return "".join([x if x not in punctuation else "" for x in s])
 
-def get_equal_arg(s):
-    return remove_punctuation(s.split("=")[1])
+    @staticmethod
+    def _remove_brackets(s):
+        brackets = {"[", "]"}
+        return "".join([x if x not in brackets else "" for x in s])
 
+    @staticmethod
+    def _get_flag(line):
+        punctuation = set(p for p in "[].,()=[]")
+        for val in punctuation:
+            line = line.replace(val, " ")
+        flag = line.split(" ")[0]
+        return flag
 
-def remove_punctuation(s):
-    punctuation = set(_ for _ in ",.()")
-    return "".join([x if x not in punctuation else "" for x in s])
+    @staticmethod
+    def non_conforming_flags(data, types):
+        """Finds all of the flags that were scraped that were not given mappings"""
+        nc_list = []
+        for ut in data:
+            for flag in data[ut]:
+                if data[ut][flag] and data[ut][flag] not in types:
+                    nc_list.append(":".join([ut, flag, data[ut][flag]]))
+        return nc_list
 
-
-def remove_brackets(s):
-    brackets = {"[", "]"}
-    return "".join([x if x not in brackets else "" for x in s])
-
-
-def get_flag(line):
-    punctuation = set(p for p in "[].,()=[]")
-    for val in punctuation:
-        line = line.replace(val, " ")
-    flag = line.split(" ")[0]
-    return flag
-
-
-def non_conforming_flags(data, types):
-    l = []
-    for ut in data:
-        for flag in data[ut]:
-            if data[ut][flag] and data[ut][flag] not in types:
-                l.append(":".join([ut, flag, data[ut][flag]]))
-    return l
-
-
-def convert_flag_types(data, mapping):
-    for ut in data:
-        for flag in data[ut]:
-            if data[ut][flag]:
-                for t in mapping:
-                    for substr in mapping[t]:
-                        if substr in data[ut][flag].lower():
-                            data[ut][flag] = t
+    @staticmethod
+    def convert_flag_types(data, mapping):
+        for ut in data:
+            for flag in data[ut]:
+                if data[ut][flag]:
+                    for t in mapping:
+                        for substr in mapping[t]:
+                            if substr in data[ut][flag].lower():
+                                data[ut][flag] = t
