@@ -1,6 +1,7 @@
 from utils import UTILITIES, ARG_TYPES
 import json
 import random
+import subprocess
 
 
 def valid_arg(flag):
@@ -113,3 +114,39 @@ def replace(rep_path, in_path, out_path='replaced_cmds.txt'):
     with open(out_path, 'w') as fp:
         for line in cmds:
             fp.write(line + '\n')
+
+    @staticmethod
+    def validate_commands(file_path):
+        """Validates a list of commands and returns only the valid commands.
+
+        Takes in a text file of bash commands and runs them on the command line. All of those
+        with non zero exit statuses are returned.
+
+        ****NOTE****
+        Only run in an isolated environment. These commands will be run and will alter the state of
+        the environment.
+        ****----****
+
+        :param file_path: (str) a file path to a text file of commands.
+        :return: (list) of (str) commands that came back with a zero exit status.
+        """
+        with open(file_path, 'r') as f:
+            cmds = f.read().split('\n')
+        ret = []
+
+        for cmd in cmds:
+            valid = True
+            try:
+                subprocess.check_output(cmd, shell=True)
+            except BaseException as e:
+                valid = False
+                print(e)
+                pass
+
+            if valid:
+                ret.append(cmd)
+
+        return ret
+
+
+
