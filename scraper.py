@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from utils import UTILITIES, TYPE_MAPS
+from utils import UTILITIES, TYPE_MAPS, ARG_TYPES
 import json
 
 
@@ -18,15 +18,20 @@ class WebScraper:
         self.data = {}
 
     def extract_utilities(self):
-        """Extracts all of the utility information from the man pages"""
-        self.insert_syntax('find', 'find options Folder Regex')
-        self.insert_syntax('tar', 'tar options File File')
-        self.insert_syntax('file', 'file options File')
-        self.insert_syntax('hostname', 'hostname options')
+        """Extracts all of the utility information from the man pages."""
+        self.insert_syntax('find', 'find Folder option')
+        self.insert_syntax('tar', 'tar option File File')
+        self.insert_syntax('file', 'file option File')
+        self.insert_syntax('hostname', 'hostname option')
+        self.insert_syntax('xargs', 'xargs option')
 
         for utility in self.utilities:
             utility_url = f'https://man7.org/linux/man-pages/man1/{utility}.1.html'
             r = requests.get(utility_url)
+            if r.status_code != 200:
+                utility_url = f'https://man7.org/linux/man-pages/man1/{utility}.2.html'
+                r = requests.get(utility_url)
+
             if r.status_code == 200:
                 print(utility)
                 soup = BeautifulSoup(r.text)
@@ -47,6 +52,9 @@ class WebScraper:
                 self._clean_and_insert_flags(utility, d)
             else:
                 print(f"No web page found for {utility}")
+        self.convert_flag_types()
+
+        self.data['find -L'] = self.data['find']  # specific behavior for find command
 
     def _clean_and_insert_flags(self, utility, lines):
         """Cleans and inserts the flags for a given utility into the data structure.
@@ -62,9 +70,10 @@ class WebScraper:
                 arg = WebScraper._get_inner_brackets(flag_line)
             elif "=" in flag_line:
                 arg = WebScraper._get_equal_arg(flag_line)
-            elif len(flag_line.split(" ")) == 2 and "-" not in flag_line[1]:
-                arg = flag_line[1]
-            self.data[utility][flag] = arg
+            elif len(flag_line.split(" ")) == 2 and "-" not in flag_line.split(" ")[1]:
+                arg = flag_line.split(" ")[1]
+            if flag not in self.data[utility] or not self.data[utility][flag]:
+                self.data[utility][flag] = arg
 
     @staticmethod
     def _generate_syntax(utility, syntax):
@@ -72,7 +81,7 @@ class WebScraper:
 
         :param utility: (str) the utility to generate syntax for.
         :param syntax: (str) the syntax scraped from the website.
-        :return (str) the cleaned syntax expression.
+        :returns (str) the cleaned syntax expression.
         """
 
         if 'option' not in syntax.lower():
@@ -125,7 +134,7 @@ class WebScraper:
         self.descs[utility] = syntax
 
     def insert_flag(self, utility, flag, arg):
-        """Manual insertion of a flag, arg mapping for a given utility
+        """Manual insertion of a flag, arg mapping for a given utility.
 
         Useful for flag, arg mappings that were not scraped correctly from man pages.
 
@@ -137,6 +146,10 @@ class WebScraper:
         self.data[utility][flag] = arg
 
     def unprocessed_utilities(self):
+        """Discovering which utilities were not found when scraping.
+
+        :returns a list of utilities with no assigned mapping.
+        """
         ret = []
         for utility in self.utilities:
             if utility not in self.descs:
@@ -146,6 +159,11 @@ class WebScraper:
 
     @staticmethod
     def _get_inner_brackets(s):
+        """Helper method to parse for value within brackets.
+
+        :param s: (str) a string with opening and closing brackets.
+        :returns (str) a string containing only the characters in between the brackets.
+        """
         open_idx = s.index("[") + 1
         closed_idx = s.index("]")
         a = s[open_idx: closed_idx]
@@ -154,42 +172,88 @@ class WebScraper:
 
     @staticmethod
     def _get_equal_arg(s):
+        """Helper method to parse for value after equal sign.
+
+        :param s: (str) a string with an equal sign.
+        :returns (str) a string with only the character proceeding the equal sign.
+        """
         return WebScraper._remove_punctuation(s.split("=")[1])
 
     @staticmethod
     def _remove_punctuation(s):
+        """Helper method to remove specific punctuation from a string.
+
+        :param s: (str) any string.
+        :returns (str) a string without commas, parenthesis, and periods.
+        """
         punctuation = set(_ for _ in ",.()")
         return "".join([x if x not in punctuation else "" for x in s])
 
     @staticmethod
     def _remove_brackets(s):
+        """Helper method to remove brackets from a string.
+
+        :param s: (str) any string.
+        :returns (str) the same string without any brackets.
+        """
         brackets = {"[", "]"}
         return "".join([x if x not in brackets else "" for x in s])
 
     @staticmethod
     def _get_flag(line):
+        """Helper method to find a flag within a line from the man pages.
+
+        :param line: (str) a scraped line from the man pages containing a flag definition.
+            Example: input "-e PATTERNS" which returns "-e".
+        :returns (str) the flag itself.
+        """
         punctuation = set(p for p in "[].,()=[]")
         for val in punctuation:
             line = line.replace(val, " ")
         flag = line.split(" ")[0]
         return flag
 
-    @staticmethod
-    def non_conforming_flags(data, types):
-        """Finds all of the flags that were scraped that were not given mappings"""
+    def non_conforming_flags(self, types=None):
+        """Finds all of the flags that were scraped that were not given mappings.
+
+        :param types: (list) of (str) valid argument types. Defaults to the list in utils.py.
+        :returns: (list) of (str) showing which utility, flag, argument type combinations do not
+            conform to the type mappings.
+        """
+        if types is None:
+            types = ARG_TYPES
+
         nc_list = []
-        for ut in data:
-            for flag in data[ut]:
-                if data[ut][flag] and data[ut][flag] not in types:
-                    nc_list.append(":".join([ut, flag, data[ut][flag]]))
+        for ut in self.data:
+            for flag in self.data[ut]:
+                if self.data[ut][flag] and self.data[ut][flag] not in types:
+                    nc_list.append(":".join([ut, flag, self.data[ut][flag]]))
         return nc_list
 
-    @staticmethod
-    def convert_flag_types(data, mapping):
-        for ut in data:
-            for flag in data[ut]:
-                if data[ut][flag]:
-                    for t in mapping:
-                        for substr in mapping[t]:
-                            if substr in data[ut][flag].lower():
-                                data[ut][flag] = t
+    def convert_flag_types(self, mapping=None):
+        """Converts the flag types to those match those in a specific mapping
+
+        Different models and datasets use different words to differentiate argument types (i.e.
+        files, directories, numbers). This method looks for key words within the scraped argument
+        types to infer the argument types based on those scraped.
+
+        :param mapping: (dict) a mapping of argument types to strings that may appear in the man
+            pages that are synonymous with the argument type.
+        """
+
+        if mapping is None:
+            mapping = TYPE_MAPS
+
+        for ut in self.data:
+            for flag in self.data[ut]:
+                if self.data[ut][flag]:
+                    arg_type = self.data[ut][flag]
+                    if arg_type == 'n' or 'size' in flag:
+                        self.data[ut][flag] = 'Number'
+                    elif 'file' in flag:
+                        self.data[ut][flag] = 'File'
+                    else:
+                        for t in mapping:
+                            for substr in mapping[t]:
+                                if substr in self.data[ut][flag].lower():
+                                    self.data[ut][flag] = t
