@@ -56,7 +56,7 @@ ARG_TYPES = [
 ]
 
 TYPE_MAPS = {
-    'Regex': {'str', 'sep', 'pattern', 'word', 'delim', 'suffix', 'from', 'glob', 'str'},
+    'Regex': {'str', 'sep', 'pattern', 'word', 'delim', 'suffix', 'from', 'glob'},
     'File': {'file'},
     'Directory': {'dir'},
     'Path': {'path'},
