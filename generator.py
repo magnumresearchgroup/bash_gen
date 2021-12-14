@@ -35,29 +35,39 @@ class Generator:
     def generate_commands(self, utility, max_commands=None):
         """Generates commands for a given utility
 
-        :param utility: (str) the utility to generate commands for.
+        :param utility: (str) or (lst) of (str) of the utility(s) to generate commands for.
         :param max_commands: (int) the maximum number of commands to generate.
 
         :returns a (list) of (str) of generated commands.
         """
-        ops = self._generate_options(utility)
-        ret = []
-        syntax = self.syntax[utility]
-        if "Invalid" in syntax:
-            return ret
-        for option_combo in ops:
-            ret.append(syntax.replace("option", option_combo))
+        if type(utility) == list:
+            ret = []
+            for ut in utility:
+                ret.extend(self.generate_commands(ut))
+        else:
+            ops = self._generate_options(utility)
+            ret = []
+            syntax = self.syntax[utility]
+            if "Invalid" in syntax:
+                return ret
+            for option_combo in ops:
+                ret.append(syntax.replace("option", option_combo))
 
         if not max_commands or max_commands > len(ret):
             return ret
         return random.sample(ret, max_commands)
 
-    def generate_all_commands(self):
+    def generate_all_commands(self, save_path=None):
         """Generates the maximum number of commands for every utility."""
         ret = []
         for ut in self.utilities:
             if ut in self.syntax and ut in self.mappings:
                 ret.extend(self.generate_commands(ut))
+
+        if save_path:
+            with open(save_path, 'w') as fp:
+                fp.write("\n".join(ret))
+
         return ret
 
     def _generate_options(self, utility):
@@ -86,18 +96,25 @@ class Generator:
         return list(set(ret))
 
 
-def replace(rep_path, in_path, out_path='replaced_cmds.txt'):
-    """Replaces generated command placeholder arguments with executable arguments
+def replace(rep_path, in_path, out_path='replaced_cmds.txt', reverse=False):
+    """Replaces particular words within a list of commands according to a given mapping.
 
-    :param rep_path: the path to a json file
-    :param in_path:
-    :param out_path:
+    This function can be used to turn a list of generic commands to actual executable commands,
+    or vice versa.
+
+    :param rep_path: (str) the path to a json file with the word mappings.
+    :param in_path: (str) the path to a text file with all of the commands to be converted.
+    :param out_path: (str) the path to the new file to save all of the converted commands to.
 
     Replacement json must be in the format
     {
     'File': 'temp.txt',
     'Folder': '/abc'
     }
+
+    and would convert
+
+    'find Folder -regex File' -->   'find /abc -regex temp.text'
     """
 
     with open(in_path, 'r') as fp:
@@ -106,47 +123,53 @@ def replace(rep_path, in_path, out_path='replaced_cmds.txt'):
     with open(rep_path, 'r') as fp:
         reps = json.load(fp)
 
-    for i in range(len(cmds)):
-        for arg_type in reps:
-            if arg_type in cmds[i]:
-                cmds[i] = cmds[i].replace(arg_type, reps[arg_type])
+    if reverse:
+        reps = {value: key for (key, value) in reps.items()}
+
+    ret = []
+    for cmd in cmds:
+        cmd_lst = []
+        for s in cmd.split(" "):
+            cmd_lst.append(s if s not in reps else reps[s])
+        ret.append(" ".join(cmd_lst))
 
     with open(out_path, 'w') as fp:
-        for line in cmds:
-            fp.write(line + '\n')
-
-    @staticmethod
-    def validate_commands(file_path):
-        """Validates a list of commands and returns only the valid commands.
-
-        Takes in a text file of bash commands and runs them on the command line. All of those
-        with non zero exit statuses are returned.
-
-        ****NOTE****
-        Only run in an isolated environment. These commands will be run and will alter the state of
-        the environment.
-        ****----****
-
-        :param file_path: (str) a file path to a text file of commands.
-        :return: (list) of (str) commands that came back with a zero exit status.
-        """
-        with open(file_path, 'r') as f:
-            cmds = f.read().split('\n')
-        ret = []
-
-        for cmd in cmds:
-            valid = True
-            try:
-                subprocess.check_output(cmd, shell=True)
-            except BaseException as e:
-                valid = False
-                print(e)
-                pass
-
-            if valid:
-                ret.append(cmd)
-
-        return ret
+        fp.write("\n".join(ret))
 
 
+def validate_commands(file_path, out_path=None):
+    """Validates a list of commands and returns only the valid commands.
 
+    Takes in a text file of bash commands and runs them on the command line. All of those
+    with non zero exit statuses are returned.
+
+    ****NOTE****
+    Only run in an isolated environment. These commands will be run and will alter the state of
+    the environment.
+    ****----****
+
+    :param file_path: (str) a file path to a text file of commands.
+    :param out_path: (optional str) a file path to save the validated commands to.
+    :return: (list) of (str) commands that came back with a zero exit status.
+    """
+    with open(file_path, 'r') as f:
+        cmds = f.read().split('\n')
+    ret = []
+
+    for cmd in cmds:
+        valid = True
+        try:
+            # run the command
+            subprocess.check_output(cmd, shell=True)
+        except BaseException as e:
+            valid = False
+            print(e)
+
+        if valid:
+            print("SUCCESS")
+            ret.append(cmd)
+
+    if out_path:
+        with open(out_path, 'w') as fp:
+            fp.write("\n".join(ret))
+    return ret
