@@ -33,7 +33,7 @@ class Generator:
         return self.utilities
 
     def generate_commands(self, utility, max_commands=None):
-        """Generates commands for a given utility
+        """Generates commands for a given utility or list of utilities.
 
         :param utility: (str) or (lst) of (str) of the utility(s) to generate commands for.
         :param max_commands: (int) the maximum number of commands to generate.
@@ -58,7 +58,11 @@ class Generator:
         return random.sample(ret, max_commands)
 
     def generate_all_commands(self, save_path=None):
-        """Generates the maximum number of commands for every utility."""
+        """Generates the maximum number of commands for every utility.
+
+        :param save_path: (optional str) the path to a file to save the commands to.
+        :returns (list) of (str) the commands generated.
+        """
         ret = []
         for ut in self.utilities:
             if ut in self.syntax and ut in self.mappings:
@@ -150,7 +154,7 @@ def validate_commands(file_path, out_path=None):
 
     :param file_path: (str) a file path to a text file of commands.
     :param out_path: (optional str) a file path to save the validated commands to.
-    :return: (list) of (str) commands that came back with a zero exit status.
+    :returns: (list) of (str) commands that came back with a zero exit status.
     """
     with open(file_path, 'r') as f:
         cmds = f.read().split('\n')
