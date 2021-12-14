@@ -1,13 +1,23 @@
 # bash_gen: A Python Bash Command Generator
 
+## Requirements
+<details><summary>Show details</summary>
+<p>
+
+* beautifulsoup4==4.7.1
+* json5==0.9.5
+
+</p>
+</details>
+
 ## Background
 This repository contains a python tool for scraping the linux man pages found at man7.org, and using the information scraped to generate bash commands based on the syntactical structure, flags, and argument types provided.
 
-This repository facilitates exploratory data analysis with the greater goal of improving a model predicting a bash command from a natural language input.
+This repository facilitates exploratory data analysis with the greater goal of improving a model predicting a bash command from a natural language input. Using this package in a Jupyter Notebook environment is recommended.
 ## Quick-Start Guide
 
-Getting started is very simple and quick. Below find an example of generating all potential commands for the find and grep utilities.
-
+Getting started is very simple and quick. Below find an example of generating all potential commands for the find and grep utilities. 
+git
 ```
 from bash_gen.generator import Generator
 
@@ -38,3 +48,11 @@ This file contains the WebScraper class, which is responsible for scraping the a
 `generator.py`
 <br><br>
 This is where the generation actually happens. In the instance that you want to match a particular distribution, make sure you pass in the `max_commands` parameter when using the `generate_commands` method.
+
+## References
+
+* [Magnum-NLC2CMD](https://github.com/magnumresearchgroup/Magnum-NLC2CMD)
+* [OpenNMT-py](https://github.com/OpenNMT/OpenNMT-py)
+* [Bashlex](https://github.com/idank/bashlex)
+* [Clai](https://github.com/IBM/clai)
+* [Tellina](https://github.com/TellinaTool/nl2bash)
