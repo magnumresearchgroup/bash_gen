@@ -1,7 +1,8 @@
 import requests
 from bs4 import BeautifulSoup
-from utils import UTILITIES, TYPE_MAPS, ARG_TYPES
+from utils import UTILITIES, TYPE_MAPS, ARG_TYPES, MANUAL_SYNTAX_INSERTS
 import json
+from pprint import pprint
 
 
 class WebScraper:
@@ -16,32 +17,72 @@ class WebScraper:
         self.utilities = utilities
         self.descs = {}
         self.data = {}
+        self.relevant_flags = {}
+
+    def load_relevant_flags(self, path='original_training.txt'):
+        """Saves all of the flags included in the original training set to the class instance.
+
+        This method takes note of all of the flags used in the training data to help limit the
+        use of rare and unnecessary flags in the bash generator.
+
+        :param path: (str) the file path for the original training data.
+        """
+
+        with open(path) as fp:
+            self.relevant_flags = set(fp.read().replace('\n', ' ').split(' '))
+
+    def is_relevant(self, flag):
+        """Returns whether or not a flag is relevant enough to be incorporated in bash generation.
+
+        This includes all flags scraped except those that both have a double hyphen ("--") and
+        are not included in the original training data.
+
+        :param flag: (str) the flag to determine relevancy for.
+
+        :returns: (bool) whether or bot the flag is deemed relevant.
+        """
+        return False if "--" in flag and flag not in self.relevant_flags else True
+
+    def display_structures(self):
+        pprint(self.descs)
+        pprint(self.data)
 
     def extract_utilities(self):
         """Extracts all of the utility information from the man pages."""
-        self.insert_syntax('find', 'find Folder option')
-        self.insert_syntax('tar', 'tar option File File')
-        self.insert_syntax('file', 'file option File')
-        self.insert_syntax('hostname', 'hostname option')
-        self.insert_syntax('xargs', 'xargs option')
+
+        print(f"Scraping the internet for {len(self.utilities)} utilities, this may take some "
+              f"time ...")
+
+        # lists to keep track of utilities with unknown man pages or syntax structures
+        no_page_uts, no_syntax_uts = [], []
+        successful_searches = []
 
         for utility in self.utilities:
             utility_url = f'https://man7.org/linux/man-pages/man1/{utility}.1.html'
             r = requests.get(utility_url)
+
+            # search different man pages for utility description if needed
             if r.status_code != 200:
                 utility_url = f'https://man7.org/linux/man-pages/man1/{utility}.2.html'
                 r = requests.get(utility_url)
 
             if r.status_code == 200:
-                print(utility)
-                soup = BeautifulSoup(r.text)
+                soup = BeautifulSoup(r.text, features='lxml')
                 desc = soup.find_all('pre')[2].text
 
                 syntax = WebScraper._generate_syntax(utility, desc.split('\n')[1].strip())
                 if not syntax:
-                    print(f"syntax not found for {utility}")
-                elif utility not in self.descs:
+                    if utility in MANUAL_SYNTAX_INSERTS:
+                        # manually insert syntax structure for given utility
+                        self.descs[utility] = MANUAL_SYNTAX_INSERTS[utility]
+                        successful_searches.append(utility)
+                    else:
+                        no_syntax_uts.append(utility)
+                elif utility:
                     self.descs[utility] = syntax
+                    successful_searches.append(utility)
+
+                # build options
                 pre_len = len(soup.find_all('pre'))
                 options = "\n".join([soup.find_all('pre')[i].text for i in range(3, pre_len)])
                 stripped_options = [line.strip() for line in options.split('\n')]
@@ -51,10 +92,14 @@ class WebScraper:
 
                 self._clean_and_insert_flags(utility, d)
             else:
-                print(f"No web page found for {utility}")
-        self.convert_flag_types()
+                no_page_uts.append(utility)
 
+        self.convert_flag_types()
         self.data['find -L'] = self.data['find']  # specific behavior for find command
+
+        print(f"Successfully scraped for {len(successful_searches)} utilities")
+        print(f"{len(no_page_uts)} utilities with no found man page: {no_page_uts}")
+        print(f"{len(no_syntax_uts)} utilities without syntax structures: {no_syntax_uts}")
 
     def _clean_and_insert_flags(self, utility, lines):
         """Cleans and inserts the flags for a given utility into the data structure.
@@ -72,7 +117,8 @@ class WebScraper:
                 arg = WebScraper._get_equal_arg(flag_line)
             elif len(flag_line.split(" ")) == 2 and "-" not in flag_line.split(" ")[1]:
                 arg = flag_line.split(" ")[1]
-            if flag not in self.data[utility] or not self.data[utility][flag]:
+            if flag not in self.data[utility] or not self.data[utility][flag] and self.is_relevant(
+                    flag):
                 self.data[utility][flag] = arg
 
     @staticmethod
@@ -97,14 +143,18 @@ class WebScraper:
             if val == utility:
                 cleaned.append(val)
             elif "option" in val:
-                cleaned.append("option")
+                cleaned.append("[Options]")
             elif val and val[0] != "-":
                 s = ""
                 for data_type in TYPE_MAPS:
                     for match in TYPE_MAPS[data_type]:
-                        if match in val:
+                        if match == val:
                             s = data_type
-                cleaned.append(s)
+                if s:
+                    if s == '[File]' and s in cleaned:
+                        cleaned.append('[File2]')
+                    else:
+                        cleaned.append(s)
 
         return " ".join(cleaned)
 
