@@ -63,6 +63,7 @@ UPDATED_ARG_TYPES = [
     "[Directory]",  # /
 
     "[File]",  # ex. temp.txt
+    "[File2]",  # second file in command
     "[File Type]",  # one of b, c, d, p, f, l, s, D
     "[Filesystem Type]",  # one of ufs, 4.2, 4.3, nfs, tmp, mfs, S51K, S52K
 
