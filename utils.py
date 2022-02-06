@@ -40,25 +40,12 @@ UTILITIES = [
     "hostname",
 ]
 
-ARG_TYPES = [
-    'Regex',
-    'File',
-    'Directory',
-    'Path',
-    'Number',
-    'Quantity',
-    'Size',
-    '+Size',
-    '-Size',
-    'Timespan',
-    'DateTime',
-    'Permission',
-]
 
-UPDATED_ARG_TYPES = [
+ARG_TYPES = [
 
     '[Pattern]',  # ex. '*.txt'
     '[Formatted String]',  # ex. '%m:%u:%g:%p\0'
+    '[Separator]',  # ex. '|'
 
     "[Directory]",  # /
 
@@ -68,10 +55,11 @@ UPDATED_ARG_TYPES = [
     "[Filesystem Type]",  # one of ufs, 4.2, 4.3, nfs, tmp, mfs, S51K, S52K
 
     '[Permission]',  # ex. 744
-    '[Mode]'
+    '[Mode]',
 
     '[Small Number]',  # ex. 1
-    '[Medium Number]'  # ex. 20
+    '[Medium Number]',  # ex. 20
+    '[Large Number]',  # ex. 800
 
     '[Action]',  # ex read, skip, recurse
 
@@ -82,17 +70,19 @@ UPDATED_ARG_TYPES = [
 
 TYPE_MAPS = {
     '[Pattern]': {'pattern', 'patterns', 'glob'},
-    '[Formatted String]': {},
-    "[Directory]": {'directory', 'dest'},
+    '[Separator]': {'delim', 'sep', 'str'},
+    '[Formatted String]': {'format', 'lfmt', 'fmt'},
+    "[Directory]": {'directory', 'dest', 'dir'},
     "[File]": {'file', 'file1', 'source'},
     "[File2]": {'file2'},  # for commands with multiple file arguments
-    "[File Type]": {},
-    "[Filesystem Type]": {},
+    "[File Type]": {'c'},
+    "[Filesystem Type]": {'type'},
     '[Permission]': {'permission'},
     '[Mode]': {'mode'},
     '[Small Number]': {'depth', 'levels', 'level', 'n', 'num', 'max-lines', 'max-args',
-                       'max-procs', 'size', 'quantity'},
-    '[Medium Number]': {},
+                       'max-procs', 'size', 'quantity', 'pid', 'uid', 'gid'},
+    '[Medium Number]': {'number'},
+    '[Large Number]': {'port', 'bytes'},
     '[Action]': {'max-chars'},
     '[Command]': {'command'}
 }

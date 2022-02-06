@@ -299,9 +299,9 @@ class WebScraper:
                 if self.data[ut][flag]:
                     arg_type = self.data[ut][flag]
                     if arg_type == 'n' or 'size' in flag:
-                        self.data[ut][flag] = 'Number'
+                        self.data[ut][flag] = '[Medium Number]'
                     elif 'file' in flag:
-                        self.data[ut][flag] = 'File'
+                        self.data[ut][flag] = '[File]'
                     else:
                         for t in mapping:
                             for substr in mapping[t]:
