@@ -1,13 +1,14 @@
 {
-  "File": "temp.txt",
-  "Folder": ".",
-  "Directory": ".",
-  "Path": ".",
-  "Regex": "'*txt'",
-  "DateTime": "5",
-  "Number": "1",
-  "Size": "1",
-  "Quantity": "1",
-  "Permission": "4",
-  "Timespan": "1"
+    "[Pattern]": "*.txt",
+    "[Formatted String]": "%m:%u:%g:%p",
+    "[Directory]": "/",
+    "[File]": "temp.txt",
+    "[File2]": "temp2.txt",
+    "[File Type]": "b",
+    "[Filesystem Type]": "ufs",
+    "[Permission]": "744",
+    "[Mode]": "r",
+    "[Small Number]": "2",
+    "[Medium Number]": "20",
+    "[Action]": "read"
 }
