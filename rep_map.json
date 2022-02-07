@@ -12,5 +12,6 @@
     "[Small Number]": "2",
     "[Medium Number]": "20",
     "[Large Number]": "800",
-    "[Action]": "read"
+    "[Action]": "read",
+    "[Command]": "echo hello"
 }
