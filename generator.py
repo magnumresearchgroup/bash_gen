@@ -1,4 +1,5 @@
 from utils import UTILITIES, ARG_TYPES
+import collections
 import json
 import random
 import subprocess
@@ -51,7 +52,7 @@ class Generator:
             if "Invalid" in syntax:
                 return ret
             for option_combo in ops:
-                ret.append(syntax.replace("option", option_combo))
+                ret.append(syntax.replace("[Options]", option_combo))
 
         if not max_commands or max_commands > len(ret):
             return ret
@@ -73,6 +74,49 @@ class Generator:
                 fp.write("\n".join(ret))
 
         return ret
+
+    def generate_scaled_commands(self, training_path='data/original_training.txt', save_path=None):
+        """Generates commands scaled to distribution of training data.
+
+        :param training_path: (str) the path to the training commands.
+        :param save_path: (optional str) the path to a file to save the commands to.
+        :returns (list) of (str) the commands generated.
+        """
+        print(f"Generating commands to match distribution of {training_path}")
+        with open(training_path) as fp:
+            cmds = fp.read().split('\n')
+            ut_list = [cmd.split(' ')[0] for cmd in cmds]
+            ut_count = collections.Counter(ut_list)
+
+        multiplier = None
+        for ut, count in ut_count.most_common(20):
+            if ut in UTILITIES:
+                multiplier = len(self.generate_commands(ut)) // ut_count[ut]
+                break
+
+        if not multiplier:
+            print("Training data utilities not supported by generator")
+            return
+
+        generated_cmds = []
+        for ut, count in ut_count.most_common(20):
+            if ut not in self.syntax:
+                print(f"No support for {ut} utility, not included in the dataset")
+            else:
+                cmds_to_add = self.generate_commands(ut, ut_count[ut] * multiplier)
+                if ut_count[ut] * multiplier > len(cmds_to_add):
+                    print(f"Unable to generate enough commands for {ut}, generated "
+                          f"{len(cmds_to_add)}/{multiplier * ut_count[ut]}")
+                else:
+                    print(f"Successfully generated {len(cmds_to_add)} commands for {ut}")
+
+                generated_cmds.extend(cmds_to_add)
+
+        if save_path:
+            with open(save_path, 'w') as fp:
+                fp.write("\n".join(generated_cmds))
+
+        return generated_cmds
 
     def _generate_options(self, utility):
         """Generates options combinations for a particular utility.
@@ -109,20 +153,21 @@ def replace(rep_path, in_path, out_path='replaced_cmds.txt', reverse=False):
     :param rep_path: (str) the path to a json file with the word mappings.
     :param in_path: (str) the path to a text file with all of the commands to be converted.
     :param out_path: (str) the path to the new file to save all of the converted commands to.
+    :param reverse: (bool) whether to reverse the direction of the replacement (i.e. replacing
+        executable commands with generic commands).
 
     Replacement json must be in the format
     {
-    'File': 'temp.txt',
-    'Folder': '/abc'
+    '[File]': 'temp.txt',
+    '[Folder]': '/abc'
     }
 
     and would convert
-
     'find Folder -regex File' -->   'find /abc -regex temp.text'
     """
 
     with open(in_path, 'r') as fp:
-        cmds = fp.read().split('\n')
+        cmds = fp.read()
 
     with open(rep_path, 'r') as fp:
         reps = json.load(fp)
@@ -130,18 +175,14 @@ def replace(rep_path, in_path, out_path='replaced_cmds.txt', reverse=False):
     if reverse:
         reps = {value: key for (key, value) in reps.items()}
 
-    ret = []
-    for cmd in cmds:
-        cmd_lst = []
-        for s in cmd.split(" "):
-            cmd_lst.append(s if s not in reps else reps[s])
-        ret.append(" ".join(cmd_lst))
+    for (key, value) in reps.items():
+        cmds = cmds.replace(key, value)
 
     with open(out_path, 'w') as fp:
-        fp.write("\n".join(ret))
+        fp.write(cmds)
 
 
-def validate_commands(file_path, out_path=None):
+def validate_commands(file_path, out_path=None, sudo=False):
     """Validates a list of commands and returns only the valid commands.
 
     Takes in a text file of bash commands and runs them on the command line. All of those
@@ -154,14 +195,17 @@ def validate_commands(file_path, out_path=None):
 
     :param file_path: (str) a file path to a text file of commands.
     :param out_path: (optional str) a file path to save the validated commands to.
+    :param sudo: (bool) whether to run the commands as a root user.
     :returns: (list) of (str) commands that came back with a zero exit status.
     """
     with open(file_path, 'r') as f:
         cmds = f.read().split('\n')
     ret = []
 
-    for cmd in cmds:
+    for count, cmd in enumerate(cmds):
         valid = True
+        if sudo:
+            cmd = " ".join(["sudo", cmd])
         try:
             # run the command
             subprocess.check_output(cmd, shell=True)
@@ -172,6 +216,8 @@ def validate_commands(file_path, out_path=None):
         if valid:
             print("SUCCESS")
             ret.append(cmd)
+
+        print(f"processed {count}/{len(cmds)} commands")
 
     if out_path:
         with open(out_path, 'w') as fp:
