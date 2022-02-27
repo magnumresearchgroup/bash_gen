@@ -44,22 +44,22 @@ UTILITIES = [
 ARG_TYPES = [
 
     '[Pattern]',  # ex. '*.txt'
-    '[Formatted String]',  # ex. '%m:%u:%g:%p\0'
+    '[FormattedString]',  # ex. '%m:%u:%g:%p\0'
     '[Separator]',  # ex. '|'
 
     "[Directory]",  # /
 
     "[File]",  # ex. temp.txt
     "[File2]",  # second file in command
-    "[File Type]",  # one of b, c, d, p, f, l, s, D
-    "[Filesystem Type]",  # one of ufs, 4.2, 4.3, nfs, tmp, mfs, S51K, S52K
+    "[FileType]",  # one of b, c, d, p, f, l, s, D
+    "[FilesystemType]",  # one of ufs, 4.2, 4.3, nfs, tmp, mfs, S51K, S52K
 
     '[Permission]',  # ex. 744
     '[Mode]',
 
-    '[Small Number]',  # ex. 1
-    '[Medium Number]',  # ex. 20
-    '[Large Number]',  # ex. 800
+    '[SmallNumber]',  # ex. 1
+    '[MediumNumber]',  # ex. 20
+    '[LargeNumber]',  # ex. 800
 
     '[Action]',  # ex read, skip, recurse
 
@@ -71,18 +71,18 @@ ARG_TYPES = [
 TYPE_MAPS = {
     '[Pattern]': {'pattern', 'patterns', 'glob'},
     '[Separator]': {'delim', 'sep', 'str'},
-    '[Formatted String]': {'format', 'lfmt', 'fmt'},
+    '[FormattedString]': {'format', 'lfmt', 'fmt'},
     "[Directory]": {'directory', 'dest', 'dir'},
     "[File]": {'file', 'file1', 'source'},
     "[File2]": {'file2'},  # for commands with multiple file arguments
-    "[File Type]": {'c'},
-    "[Filesystem Type]": {'type'},
+    "[FileType]": {'c'},
+    "[FilesystemType]": {'type'},
     '[Permission]': {'permission'},
     '[Mode]': {'mode'},
-    '[Small Number]': {'depth', 'levels', 'level', 'n', 'num', 'max-lines', 'max-args',
+    '[SmallNumber]': {'depth', 'levels', 'level', 'n', 'num', 'max-lines', 'max-args',
                        'max-procs', 'size', 'quantity', 'pid', 'uid', 'gid'},
-    '[Medium Number]': {'number'},
-    '[Large Number]': {'port', 'bytes'},
+    '[MediumNumber]': {'number'},
+    '[LargeNumber]': {'port', 'bytes'},
     '[Action]': {'max-chars'},
     '[Command]': {'command'}
 }
@@ -103,4 +103,23 @@ POST_PIPE = {
     'head',
     'sed',
     'tee',
+}
+
+TYPE_SIMPLIFIER = {
+    '[Pattern]': {'pattern', 'patterns', 'glob'},
+    '[Separator]': {'delim', 'sep', 'str'},
+    '[FormattedString]': {'format', 'lfmt', 'fmt'},
+    "[Directory]": {'directory', 'dest', 'dir'},
+    "[File]": {'file', 'file1', 'source'},
+    "[File2]": {'file2'},  # for commands with multiple file arguments
+    "[FileType]": {'c'},
+    "[FilesystemType]": {'type'},
+    '[Permission]': {'permission'},
+    '[Mode]': {'mode'},
+    '[SmallNumber]': {'depth', 'levels', 'level', 'n', 'num', 'max-lines', 'max-args',
+                       'max-procs', 'size', 'quantity', 'pid', 'uid', 'gid'},
+    '[MediumNumber]': {'number'},
+    '[LargeNumber]': {'port', 'bytes'},
+    '[Action]': {'max-chars'},
+    '[Command]': {'command'}
 }
