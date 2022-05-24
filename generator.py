@@ -3,6 +3,7 @@ import collections
 import json
 import random
 import subprocess
+import threading
 
 
 def valid_arg(flag):
@@ -48,14 +49,17 @@ class Generator:
         else:
             ops = self._generate_options(utility)
             ret = []
-            syntax = self.syntax[utility]
-            if "Invalid" in syntax:
+            if utility not in self.syntax or "Invalid" in self.syntax[utility]:
                 return ret
+
+            syntax = self.syntax[utility]
             for option_combo in ops:
                 ret.append(syntax.replace("[Options]", option_combo))
 
         if not max_commands or max_commands > len(ret):
+            print(f"Generated {len(ret)} commands for {utility}")
             return ret
+        print(f"Generated {max_commands} commands for {utility}")
         return random.sample(ret, max_commands)
 
     def generate_all_commands(self, save_path=None):
@@ -88,15 +92,7 @@ class Generator:
             ut_list = [cmd.split(' ')[0] for cmd in cmds]
             ut_count = collections.Counter(ut_list)
 
-        multiplier = None
-        for ut, count in ut_count.most_common(20):
-            if ut in UTILITIES:
-                multiplier = len(self.generate_commands(ut)) // ut_count[ut]
-                break
-
-        if not multiplier:
-            print("Training data utilities not supported by generator")
-            return
+        multiplier = 10
 
         generated_cmds = []
         for ut, count in ut_count.most_common(20):
@@ -167,7 +163,7 @@ def replace(rep_path, in_path, out_path='replaced_cmds.txt', reverse=False):
     """
 
     with open(in_path, 'r') as fp:
-        cmds = fp.read()
+        old_cmds = fp.read()
 
     with open(rep_path, 'r') as fp:
         reps = json.load(fp)
@@ -175,14 +171,21 @@ def replace(rep_path, in_path, out_path='replaced_cmds.txt', reverse=False):
     if reverse:
         reps = {value: key for (key, value) in reps.items()}
 
-    for (key, value) in reps.items():
-        cmds = cmds.replace(key, value)
+    cmds = []
+    old_cmds = old_cmds.split('\n')
+    for cmd in old_cmds:
+        new_cmd = []
+        for word in cmd.split(' '):
+            if word in reps:
+                word = reps[word]
+            new_cmd.append(word)
+        cmds.append(" ".join(new_cmd))
 
     with open(out_path, 'w') as fp:
-        fp.write(cmds)
+        fp.write("\n".join(cmds))
 
 
-def validate_commands(file_path, out_path=None, sudo=False):
+def validate_commands(file_path, out_path=None, checkpoint=0, sudo=False):
     """Validates a list of commands and returns only the valid commands.
 
     Takes in a text file of bash commands and runs them on the command line. All of those
@@ -202,20 +205,30 @@ def validate_commands(file_path, out_path=None, sudo=False):
         cmds = f.read().split('\n')
     ret = []
 
+    if checkpoint > 0 and out_path:
+        with open(out_path, 'r') as fp:
+            ret = fp.read().split("\n")
+            ret.pop()
+
     for count, cmd in enumerate(cmds):
-        valid = True
+        if count < checkpoint or cmd.split(" ")[0] == "tar":
+            print(f"processed {count}/{len(cmds)} commands")
+            continue
+
         if sudo:
             cmd = " ".join(["sudo", cmd])
-        try:
-            # run the command
-            subprocess.check_output(cmd, shell=True)
-        except BaseException as e:
-            valid = False
-            print(e)
 
-        if valid:
+        res = Command(cmd).run()
+
+        if res == 0:
             print("SUCCESS")
             ret.append(cmd)
+
+        if out_path and count % 100 == 0:
+            with open(out_path, 'w') as fp:
+                ins = "\n".join(ret + [str(count)])
+                fp.write(ins)
+            print(f"BENCHMARK: {count}")
 
         print(f"processed {count}/{len(cmds)} commands")
 
@@ -223,3 +236,29 @@ def validate_commands(file_path, out_path=None, sudo=False):
         with open(out_path, 'w') as fp:
             fp.write("\n".join(ret))
     return ret
+
+
+class Command(object):
+    def __init__(self, cmd):
+        self.cmd = cmd
+        self.process = None
+        self.code = None
+
+    def run_command(self):
+        # capturing the outputs of shell commands
+        self.process = subprocess.Popen(self.cmd, shell=True, stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE, stdin=subprocess.PIPE)
+        self.process.communicate()
+        self.code = self.process.returncode
+
+    # set default timeout to 2 minutes
+    def run(self, timeout=0.25):
+        thread = threading.Thread(target=self.run_command)
+        thread.start()
+        thread.join(timeout)
+        if thread.is_alive():
+            print('Command timeout, kill it: ' + self.cmd)
+            if self.process is not None:
+                self.process.terminate()
+                thread.join(timeout)
+        return self.code
