@@ -13,7 +13,8 @@
 ## Background
 This repository contains a python tool for scraping the linux man pages found at man7.org, and using the information scraped to generate bash commands based on the syntactical structure, flags, and argument types provided.
 
-This repository facilitates exploratory data analysis with the greater goal of improving a model predicting a bash command from a natural language input. Using this package in a Jupyter Notebook environment is recommended.
+This repository allows you to synthesize an entire dataset of valid bash commands. Together with a transformer-based backtranslation model, we were able to create a dataset of thousands of natural language, bash-command pairs to further the advancement of machine translation models.
+
 ## Quick-Start Guide
 
 Getting started is very simple and quick. Below find an example of generating all potential commands for the find and grep utilities. 
