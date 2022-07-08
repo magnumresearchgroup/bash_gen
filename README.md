@@ -52,6 +52,18 @@ This is where the generation actually happens. In the instance that you want to 
 
 ## References
 
+If you use this repository, please consider citing:
+
+```
+@article{Fu2021ATransform,
+  title={A Transformer-based Approach for Translating Natural Language to Bash Commands},
+  author={Quchen Fu and Zhongwei Teng and Jules White and Douglas C. Schmidt},
+  journal={2021 20th IEEE International Conference on Machine Learning and Applications (ICMLA)},
+  year={2021},
+  pages={1241-1244}
+}
+```
+
 * [Magnum-NLC2CMD](https://github.com/magnumresearchgroup/Magnum-NLC2CMD)
 * [OpenNMT-py](https://github.com/OpenNMT/OpenNMT-py)
 * [Bashlex](https://github.com/idank/bashlex)
