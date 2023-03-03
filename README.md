@@ -50,6 +50,8 @@ This file contains the WebScraper class, which is responsible for scraping the a
 <br><br>
 This is where the generation actually happens. In the instance that you want to match a particular distribution, make sure you pass in the `max_commands` parameter when using the `generate_commands` method.
 
+Here we provide the python script for generating bash command with chatGPT and also the corresponding English in `chatGPT_generate.py`
+
 ## References
 
 If you use this repository, please consider citing:
