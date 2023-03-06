@@ -1,5 +1,7 @@
 # bash_gen: A Python Bash Command Generator
 
+[chatGPT achieved an accuracy score of 80.6% on the test set under zeroshot conditions]: https://arxiv.org/abs/2302.07845
+
 ## Requirements
 <details><summary>Show details</summary>
 <p>
@@ -55,7 +57,6 @@ Here we provide the python script for generating bash command with chatGPT and a
 ## Rethinking NL2CMD in the age of ChatGPT 
 
 There is a widespread belief among experts that the field of natural language processing (NLP) is currently experiencing a paradigm shift as a result of the introduction of LLM (Large Language Models), with chatGPT being the leading example of this new technology. With this new technology, many tasks that previously relied on fine-tuning pre-trained models can now be achieved through prompt engineering, which involves identifying the appropriate instructions to direct the language model (LLM) for specific tasks. To evaluate the effectiveness of chatGPT, we conducted tests on the original NL2BASH dataset, and the results were exceptional. Specifically, we found that **[chatGPT achieved an accuracy score of 80.6% on the test set under zeroshot conditions]**. Although there are concerns about the possibility of data leakage in LLM-based translation due to the vast amount of internet text in the pre-training data, we have confidence in the performance of chatGPT, given its consistent ability to achieve scores of 80% or higher across all training, testing, and evaluation datasets. 
-[chatGPT achieved an accuracy score of 80.6% on the test set under zeroshot conditions]: https://arxiv.org/abs/2302.07845
 
 <p align="center">
 <img width="500" alt="pipeline" src="https://user-images.githubusercontent.com/31392274/223152672-4704ed94-83d1-4ff2-93d2-14dab48ab748.png">
